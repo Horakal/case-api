@@ -26,6 +26,8 @@ namespace RestApiCase.Infrastructure.Data
                       .HasMaxLength(500);
                 entity.Property(e => e.CreatedAt)
                       .IsRequired();
+                entity.Property(e => e.UpdatedAt);
+                entity.Property(e => e.DueDate);
             });
 
             modelBuilder.Entity<User>(entity =>

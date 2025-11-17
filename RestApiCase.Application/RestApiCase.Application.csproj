@@ -5,9 +5,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Task\Response\" />
-    <Folder Include="Task\Interfaces\" />
-    <Folder Include="Task\Mappings\" />
+    <PackageReference Include="FluentValidation" Version="12.0.0" />
   </ItemGroup>
 
   <PropertyGroup>

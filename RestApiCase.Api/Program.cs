@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using FluentValidation;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -11,6 +12,8 @@ using RestApiCase.Domain.User.Interface;
 using RestApiCase.Infrastructure.Data;
 using System.Security.Cryptography;
 using System.Text;
+using RestApiCase.Application.Tasks.DTOS.ResponseDTO;
+using RestApiCase.Application.Tasks.Validators;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,7 +29,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApi();
 builder.Services.AddDbContext<TaskDbContext>(options =>
    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
-
+builder.Services.AddValidatorsFromAssemblyContaining<CreateTaskValidator>();
 builder.Services.AddAuthentication(option =>
 {
     option.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -50,7 +53,7 @@ builder.Services.AddAuthentication(option =>
         IssuerSigningKey = new SymmetricSecurityKey(keyBytes),
     };
 });
-builder.Services.AddScoped<ITaskService, TaskService>();
+builder.Services.AddScoped<ITaskService<TaskResponse>, TaskService>();
 builder.Services.AddScoped<ITaskRepository, TaskRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 
@@ -61,6 +64,23 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
+
+app.UseExceptionHandler(errorApp =>
+{
+    errorApp.Run(async context =>
+    {
+        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        context.Response.ContentType = "application/json";
+
+        var exception = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>();
+        var errorResponse = new
+        {
+            StatusCode = context.Response.StatusCode,
+            Message = $"Ocorreu um erro. Tente novamente mais tarde. {exception?.Error?.Message}",
+        };
+        await context.Response.WriteAsJsonAsync(errorResponse);
+    });
+});
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();

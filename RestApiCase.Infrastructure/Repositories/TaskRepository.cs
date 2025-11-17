@@ -26,22 +26,14 @@ namespace RestApiCase.Infrastructure.Repositories
             return task;
         }
 
-        public async Task<bool> DeleteTaskAsync(Guid id)
+        public async Task DeleteTaskAsync(Guid id)
         {
-            try
-            {
-                await _context.Tasks.Where(x => x.Id == id).ExecuteDeleteAsync();
-                return true;
-            }
-            catch (Exception)
-            {
-                return false;
-            }
+            await _context.Tasks.Where(x => x.Id == id).ExecuteDeleteAsync();
         }
 
         public async Task<IEnumerable<TaskItem>> GetAllTasksAsync(Guid userId)
         {
-            List<TaskItem> tasks = await _context.Tasks.Where(x => x.UserId == userId).ToListAsync();
+            List<TaskItem> tasks = await _context.Tasks.Where(x => x.UserId == userId).OrderByDescending(x => x.Status).ToListAsync();
             return tasks;
         }
 
@@ -50,12 +42,10 @@ namespace RestApiCase.Infrastructure.Repositories
             return await _context.Tasks.Where(x => x.Id == id).FirstOrDefaultAsync();
         }
 
-        public async Task<bool> UpdateTaskAsync(TaskItem task)
+        public async Task UpdateTaskAsync(TaskItem task)
         {
             await _context.Tasks.AddAsync(task);
-            int save = await _context.SaveChangesAsync();
-
-            return save > 0;
+            await _context.SaveChangesAsync();
         }
     }
 }

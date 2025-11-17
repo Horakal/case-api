@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
-using RestApiCase.Api.Requests;
+using RestApiCase.Application.User.DTOs.Requests;
 using RestApiCase.Domain.User.Interface;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;

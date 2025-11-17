@@ -8,9 +8,9 @@ namespace RestApiCase.Domain.Tasks.Interfaces
 
         Task<TaskItem?> GetTaskByIdAsync(Guid id);
 
-        Task<bool> UpdateTaskAsync(TaskItem task);
+        Task UpdateTaskAsync(TaskItem task);
 
-        Task<bool> DeleteTaskAsync(Guid id);
+        Task DeleteTaskAsync(Guid id);
 
         Task<IEnumerable<TaskItem>> GetAllTasksAsync(Guid id);
     }
