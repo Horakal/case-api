@@ -17,11 +17,12 @@ namespace RestApiCase.Application.Tasks.DTOS.Requests
 
         public TaskItemStatus Status { get; set; }
 
+        public Guid UserUpdateId { get; set; }
         public UpdateTask()
         {
         }
 
-        public UpdateTask(Guid id, string? title, string? description, string? summary, DateTime? dueDate, TaskItemStatus status)
+        public UpdateTask(Guid id, string? title, string? description, string? summary, DateTime? dueDate, TaskItemStatus status, Guid userUpdateId)
         {
             Id = id;
             Title = title;
@@ -29,6 +30,7 @@ namespace RestApiCase.Application.Tasks.DTOS.Requests
             Summary = summary;
             DueDate = dueDate;
             Status = status;
+            UserUpdateId = userUpdateId;
         }
     }
 }
