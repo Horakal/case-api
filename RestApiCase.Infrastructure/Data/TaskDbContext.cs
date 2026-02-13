@@ -12,7 +12,6 @@ namespace RestApiCase.Infrastructure.Data
         }
 
         public DbSet<TaskItem> Tasks { get; set; } = null!;
-        public DbSet<User> Users { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -28,17 +27,6 @@ namespace RestApiCase.Infrastructure.Data
                       .IsRequired();
                 entity.Property(e => e.UpdatedAt);
                 entity.Property(e => e.DueDate);
-            });
-
-            modelBuilder.Entity<User>(entity =>
-            {
-                entity.HasKey(e => e.Id);
-                entity.Property(e => e.UserName)
-                      .IsRequired()
-                      .HasMaxLength(50);
-                entity.Property(e => e.Password)
-                      .IsRequired()
-                      .HasMaxLength(100);
             });
         }
     }
