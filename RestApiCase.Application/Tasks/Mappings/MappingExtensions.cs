@@ -40,7 +40,7 @@ namespace RestApiCase.Application.Tasks.Mappings
             if (!string.IsNullOrEmpty(request.Summary))
                 task.UpdateSummary(request.Summary);
             if (request.DueDate.HasValue)
-                task.UpdateDueDate(request.DueDate.Value);
+                task.UpdateDueDate(request.DueDate.Value.ToUniversalTime());
             if (request.Status != task.Status && Enum.IsDefined(request.Status))
                 task.UpdateStatus(request.Status);
         }

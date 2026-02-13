@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using RestApiCase.Domain.Commons;
 using RestApiCase.Domain.Tasks.Enums;
 
 namespace RestApiCase.Domain.Tasks.Entities
@@ -20,7 +21,7 @@ namespace RestApiCase.Domain.Tasks.Entities
         }
     }
 
-    public class DomainValidationException : Exception
+    public class DomainValidationException : DomainException
     {
         public IReadOnlyList<ValidationError> Erros { get; }
 
@@ -31,9 +32,8 @@ namespace RestApiCase.Domain.Tasks.Entities
         }
     }
 
-    public class TaskItem
+    public class TaskItem : Entity<Guid>
     {
-        public Guid Id { get; private set; }
         public Guid UserId { get; private set; }
         public string Title { get; private set; }
 
