@@ -1,0 +1,14 @@
+**/.git
+**/.vs
+**/.vscode
+**/bin
+**/obj
+**/TestResults
+**/coveragereport
+**/node_modules
+**/*.user
+**/*.md
+**/bruno
+**/.dockerignore
+**/docker-compose*.yml
+*.docx
