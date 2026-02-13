@@ -1,15 +1,19 @@
-﻿using RestApiCase.Domain.Tasks.Entities;
-using RestApiCase.Domain.Tasks.Interfaces;
-using RestApiCase.Application.Tasks.DTOS.ResponseDTO;
-using RestApiCase.Domain.Tasks.Commands;
+﻿using Microsoft.AspNetCore.Http;
 using RestApiCase.Application.Tasks.DTOS.Requests;
+using RestApiCase.Application.Tasks.DTOS.ResponseDTO;
 using RestApiCase.Application.Tasks.Mappings;
+using RestApiCase.Domain.Tasks.Commands;
+using RestApiCase.Domain.Tasks.Entities;
+using RestApiCase.Domain.Tasks.Enums;
+using RestApiCase.Domain.Tasks.Interfaces;
+using System.Net.Http;
 
 namespace RestApiCase.Application.Tasks.Services
 {
-    public class TaskService(ITaskRepository taskRepository) : ITaskService<TaskResponse>
+    public class TaskService(ITaskRepository taskRepository, IHttpContextAccessor contextAccessor) : ITaskService<TaskResponse>
     {
         private readonly ITaskRepository _taskRepository = taskRepository;
+        private readonly IHttpContextAccessor _httpContextAccessor = contextAccessor;
 
         public async Task<TaskResponse> ExecuteAsync<TRequest>(TRequest request) where TRequest : ICommand
         {
@@ -28,6 +32,7 @@ namespace RestApiCase.Application.Tasks.Services
             {
                 throw new ArgumentException("Invalid request type", nameof(request));
             }
+
             var newTask = createTask.ToTaskItem();
 
             var task = await _taskRepository.CreateTaskAsync(newTask);
@@ -35,34 +40,23 @@ namespace RestApiCase.Application.Tasks.Services
             return task.ToTaskResponse();
         }
 
-        public async Task DeleteTaskAsync(string id)
+        public async Task DeleteTaskAsync(Guid id)
         {
-            _ = Guid.TryParse(id, out Guid guid);
-            if (guid == Guid.Empty)
-            {
-                throw new KeyNotFoundException("Task not found");
-            }
-            await _taskRepository.DeleteTaskAsync(guid);
+            await _taskRepository.DeleteTaskAsync(id);
         }
 
-        public async Task<IEnumerable<TaskResponse>> GetAllTasksAsync(string id)
+        public async Task<IEnumerable<TaskResponse>> GetAllTasksAsync(Guid userId, TaskItemStatus? status = null)
         {
-            _ = Guid.TryParse(id, out Guid guid);
-            if (guid == Guid.Empty)
-            {
-                throw new KeyNotFoundException("User not found");
-            }
+            var isSuperUser = _httpContextAccessor.HttpContext.User.IsInRole("SUPER_USER");
+            var tasks = await _taskRepository.GetAllTasksAsync(userId, isSuperUser, status);
 
-            var tasks = await _taskRepository.GetAllTasksAsync(guid);
-
-            return [.. tasks.Select(x => x.ToTaskResponse())];
+            return tasks.Select(x => x.ToTaskResponse());
         }
 
-        public async Task<TaskResponse?> GetTaskByIdAsync(string id)
+        public async Task<TaskResponse?> GetTaskByIdAsync(Guid id, Guid userId)
         {
-            _ = Guid.TryParse(id, out Guid guid);
-
-            var task = await _taskRepository.GetTaskByIdAsync(guid);
+            var isSuperUser = _httpContextAccessor.HttpContext.User.IsInRole("SUPER_USER");
+            var task = await _taskRepository.GetTaskByIdAsync(id, isSuperUser, userId);
 
             return task?.ToTaskResponse();
         }
@@ -78,16 +72,14 @@ namespace RestApiCase.Application.Tasks.Services
             {
                 throw new KeyNotFoundException("Invalid Id");
             }
-            var taskToUpdate = await _taskRepository.GetTaskByIdAsync(updateTask.Id) ?? throw new KeyNotFoundException("Task not found");
+           
+            var isSuperUser = _httpContextAccessor.HttpContext.User.IsInRole("SUPER_USER");
+            var taskToUpdate = await _taskRepository.GetTaskByIdAsync(updateTask.Id, isSuperUser, updateTask.UserUpdateId) ?? throw new KeyNotFoundException("Task not found");
             taskToUpdate.ApplyUpdate(updateTask);
 
             return await _taskRepository.UpdateTaskAsync(taskToUpdate)
                 .ContinueWith(_ => taskToUpdate.ToTaskResponse());
         }
 
-        public Task<IEnumerable<TaskResponse>> GetTasksByStatusAsync(string userId, int status)
-        {
-            throw new NotImplementedException();
-        }
     }
 }

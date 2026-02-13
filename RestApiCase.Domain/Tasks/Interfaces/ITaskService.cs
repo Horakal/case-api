@@ -1,5 +1,6 @@
 ﻿using RestApiCase.Domain.Tasks.Commands;
 using RestApiCase.Domain.Tasks.Entities;
+using RestApiCase.Domain.Tasks.Enums;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,14 +12,12 @@ namespace RestApiCase.Domain.Tasks.Interfaces
     {
         Task<TResponse> ExecuteAsync<TRequest>(TRequest request) where TRequest : ICommand;
 
-        Task<TResponse?> GetTaskByIdAsync(string id);
+        Task<TResponse?> GetTaskByIdAsync(Guid id, Guid userId);
 
         Task<TResponse> UpdateTaskAsync<TRequest>(TRequest request) where TRequest : class;
 
-        Task DeleteTaskAsync(string id);
+        Task DeleteTaskAsync(Guid id);
 
-        Task<IEnumerable<TResponse>> GetAllTasksAsync(string userId);
-
-        Task<IEnumerable<TResponse>> GetTasksByStatusAsync(string userId, int status);
+        Task<IEnumerable<TResponse>> GetAllTasksAsync(Guid userId, TaskItemStatus? status = null);
     }
 }

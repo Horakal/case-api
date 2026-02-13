@@ -7,11 +7,13 @@ using Microsoft.EntityFrameworkCore;
 using RestApiCase.Application.Tasks.DTOS.Requests;
 using RestApiCase.Application.Tasks.DTOS.ResponseDTO;
 using RestApiCase.Domain.Tasks.Entities;
+using RestApiCase.Domain.Tasks.Enums;
 using RestApiCase.Domain.Tasks.Interfaces;
 using RestApiCase.Domain.User.Interface;
 using RestApiCase.Infrastructure.Data;
 using System;
 using System.Collections.Generic;
+using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Net;
 using System.Security.Claims;
@@ -28,18 +30,24 @@ namespace RestApiCase.Api.Controllers
         private readonly IUserService _userService = userService;
 
         [HttpGet]
-        [ProducesResponseType(typeof(IEnumerable<TaskItem>), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(IEnumerable<TaskResponse>), (int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.NoContent)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
-        public async Task<ActionResult<IEnumerable<TaskItem>>> GetTask()
+        public async Task<ActionResult<IEnumerable<TaskResponse>>> GetTasks([FromQuery] TaskItemStatus? status)
         {
-            var userId = User?.FindFirst("jti")?.Value;
+            var userId = User?.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
             if (string.IsNullOrEmpty(userId) || !Guid.TryParse(userId, out Guid userGuid))
             {
                 return Unauthorized();
             }
 
-            var tasks = await _taskService.GetAllTasksAsync(userId);
+            if (status.HasValue && !Enum.IsDefined(status.Value))
+            {
+                return BadRequest("Invalid status");
+            }
+
+            var tasks = await _taskService.GetAllTasksAsync(userGuid, status);
 
             if (tasks == null || !tasks.Any())
             {
@@ -48,23 +56,23 @@ namespace RestApiCase.Api.Controllers
             return Ok(tasks);
         }
 
-        [HttpGet("{id}")]
-        [ProducesResponseType(typeof(TaskItem), (int)HttpStatusCode.OK)]
+        [HttpGet("{id:guid}")]
+        [ProducesResponseType(typeof(TaskResponse), (int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
-        public async Task<ActionResult<TaskItem>> GetTask(string id)
+        public async Task<ActionResult<TaskResponse>> GetTask(Guid id)
         {
-            if (string.IsNullOrEmpty(id))
+            var userId = User?.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
+            if (string.IsNullOrEmpty(userId) || !Guid.TryParse(userId, out Guid userGuid))
             {
-                return BadRequest("Invalid ID");
+                return Unauthorized();
             }
-            var tasks = await _taskService.GetTaskByIdAsync(id);
-            if (tasks == null)
+            var task = await _taskService.GetTaskByIdAsync(id, userGuid);
+            if (task == null)
             {
                 return NotFound("No task found");
             }
-            return Ok(tasks);
+            return Ok(task);
         }
 
         [HttpPost]
@@ -80,7 +88,7 @@ namespace RestApiCase.Api.Controllers
             }
             request.UserId = userGuid;
             var task = await _taskService.ExecuteAsync(request);
-            return CreatedAtAction(nameof(TaskItem), new { id = task.Id }, task);
+            return CreatedAtAction(nameof(GetTask), new { id = task.Id }, task);
         }
 
         [HttpPut("{id}")]
@@ -94,21 +102,23 @@ namespace RestApiCase.Api.Controllers
                 return BadRequest("Id inválido");
             }
             request.Id = Guid.Parse(id);
+            var userId = User?.FindFirst("jti")?.Value;
+            if (string.IsNullOrEmpty(userId) || !Guid.TryParse(userId, out Guid userGuid))
+            {
+                return Unauthorized();
+            }
+            request.UserUpdateId = userGuid;
             await _taskService.ExecuteAsync(request);
             return NoContent();
         }
 
         // DELETE: api/TaskItems/5
-        [HttpDelete("{id}")]
+        [HttpDelete("{id:guid}")]
         [ProducesResponseType((int)HttpStatusCode.NoContent)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
-        public async Task<IActionResult> DeleteTasks(string id)
+        public async Task<IActionResult> DeleteTasks(Guid id)
         {
-            if (string.IsNullOrEmpty(id))
-            {
-                return BadRequest("Id inválido");
-            }
             await _taskService.DeleteTaskAsync(id);
             return NoContent();
         }
