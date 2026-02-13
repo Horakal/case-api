@@ -1,8 +1,12 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using RestApiCase.Application.User.DTOs.Requests;
+using RestApiCase.Application.User.DTOs.Response;
+using RestApiCase.Domain.Commons;
 using RestApiCase.Domain.User.Interface;
+using RestApiCase.Infrastructure.Repositories;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -24,16 +28,33 @@ namespace RestApiCase.Api.Controllers
         }
 
         [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] UserLogin user)
+        public async Task<ActionResult<UserResponse>> Login([FromBody] UserLogin user)
         {
             var id = await _userService.Authenticate(user.Username, user.Password);
 
-            if (id != null)
+            if (id is not null)
             {
-                var token = GenerateJwtToken(user.Username, (Guid)id);
-                return Ok(new { token });
+                var guidId = (Guid)id;
+                var token = GenerateJwtToken(user.Username, guidId);
+                var refreshToken = Guid.NewGuid().ToString();
+                var refreshEntity = new RefreshToken(refreshToken, guidId, false, DateTime.UtcNow.AddDays(15));
+                await _userService.CreateToken(refreshEntity);
+                return Ok(new UserResponse { Token = token, RefreshToken = refreshToken });
             }
             return Unauthorized();
+        }
+
+        [HttpPost("logout")]
+        [Authorize]
+        public async Task<ActionResult> Logout()
+        {
+            var userId = User?.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
+            if (!string.IsNullOrEmpty(userId) && Guid.TryParse(userId, out Guid guidId))
+            {
+                await _userService.DeleteToken(guidId);
+            }
+
+            return Ok();
         }
 
         private string GenerateJwtToken(string username, Guid id)
@@ -56,10 +77,33 @@ namespace RestApiCase.Api.Controllers
                 issuer: _configuration["Jwt:Issuer"],
                 audience: _configuration["Jwt:Audience"],
                 claims: claims,
-                expires: DateTime.Now.AddMinutes(30),
+                expires: DateTime.UtcNow.AddMinutes(5),
                 signingCredentials: creds);
 
             return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+
+        [HttpPost("refresh")]
+        public async Task<ActionResult<UserResponse>> Refresh([FromBody] RefreshAccess refreshAcces)
+        {
+            if (string.IsNullOrEmpty(refreshAcces.RefreshToken))
+            {
+                return BadRequest("Refresh token inválido");
+            }
+
+            if (string.IsNullOrEmpty(refreshAcces.UserId) || !Guid.TryParse(refreshAcces.UserId, out Guid guidId))
+            {
+                return Unauthorized();
+            }
+            var user = await _userService.GetById(guidId);
+            if (user == null) { return Unauthorized(); }
+
+            var isValid = await _userService.ValidateToken(refreshAcces.RefreshToken, guidId);
+            if (!isValid) { return Unauthorized(); }
+            var userName = user.Username;
+
+            var token = GenerateJwtToken(userName, guidId);
+            return Ok(new UserResponse { Token = token, RefreshToken = refreshAcces.RefreshToken });
         }
     }
 }
