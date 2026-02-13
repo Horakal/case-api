@@ -1,0 +1,30 @@
+meta {
+  name: Create Task
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/v1/TasksItems
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "title": "My new task",
+    "description": "Task description here",
+    "summary": "Brief summary",
+    "dueDate": "2026-03-01T00:00:00"
+  }
+}
+
+script:post-response {
+  if (res.status === 201) {
+    bru.setVar("taskId", res.body.id);
+  }
+}

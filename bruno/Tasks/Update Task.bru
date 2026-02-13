@@ -1,0 +1,25 @@
+meta {
+  name: Update Task
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/api/v1/TasksItems/{{taskId}}
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "title": "Updated task title",
+    "description": "Updated description",
+    "summary": "Updated summary",
+    "dueDate": "2026-04-01T00:00:00",
+    "status": 1
+  }
+}
